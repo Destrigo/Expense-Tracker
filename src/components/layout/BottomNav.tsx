@@ -1,4 +1,4 @@
-import { Home, List, PieChart, Settings } from 'lucide-react';
+import { Home, List, PieChart, Settings, User } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +7,7 @@ const navItems = [
   { path: '/expenses', icon: List, label: 'Expenses' },
   { path: '/analytics', icon: PieChart, label: 'Analytics' },
   { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 export const BottomNav = () => {

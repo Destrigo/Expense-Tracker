@@ -1,7 +1,15 @@
 import { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  Cell,
+} from 'recharts';
 import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
-import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterval, startOfYear, endOfYear, parseISO } from 'date-fns';
 import { useExpenses } from '@/contexts/ExpenseContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { MonthSelector } from '@/components/expense/MonthSelector';
@@ -9,6 +17,7 @@ import { SpendingChart, ChartLegend } from '@/components/expense/SpendingChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CategoryIcon } from '@/components/expense/CategoryIcon';
+import { Button } from '@/components/ui/button';
 import {
   getMonthKey,
   getExpensesForMonth,
@@ -23,6 +32,7 @@ import { cn } from '@/lib/utils';
 const Analytics = () => {
   const { expenses, categories, budgets } = useExpenses();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
 
   const monthKey = useMemo(() => getMonthKey(currentMonth), [currentMonth]);
   const prevMonthKey = useMemo(
@@ -30,69 +40,99 @@ const Analytics = () => {
     [currentMonth]
   );
 
-  const monthExpenses = useMemo(
-    () => getExpensesForMonth(expenses, monthKey),
-    [expenses, monthKey]
-  );
+  // Determine expenses based on view mode
+  const periodExpenses = useMemo(() => {
+    if (viewMode === 'monthly') {
+      return getExpensesForMonth(expenses, monthKey);
+    } else {
+      const start = startOfYear(currentMonth);
+      const end = endOfYear(currentMonth);
+      return expenses.filter(e => {
+        const date = parseISO(e.date);
+        return date >= start && date <= end;
+      });
+    }
+  }, [viewMode, expenses, monthKey, currentMonth]);
 
-  const prevMonthExpenses = useMemo(
-    () => getExpensesForMonth(expenses, prevMonthKey),
-    [expenses, prevMonthKey]
-  );
+  const prevPeriodExpenses = useMemo(() => {
+    if (viewMode === 'monthly') {
+      return getExpensesForMonth(expenses, prevMonthKey);
+    } else {
+      const prevYear = new Date(currentMonth).setFullYear(currentMonth.getFullYear() - 1);
+      const start = startOfYear(prevYear);
+      const end = endOfYear(prevYear);
+      return expenses.filter(e => {
+        const date = parseISO(e.date);
+        return date >= start && date <= end;
+      });
+    }
+  }, [viewMode, expenses, currentMonth, prevMonthKey]);
 
   const totalSpent = useMemo(
-    () => calculateTotalSpent(monthExpenses),
-    [monthExpenses]
+    () => calculateTotalSpent(periodExpenses),
+    [periodExpenses]
   );
-
   const prevTotalSpent = useMemo(
-    () => calculateTotalSpent(prevMonthExpenses),
-    [prevMonthExpenses]
+    () => calculateTotalSpent(prevPeriodExpenses),
+    [prevPeriodExpenses]
   );
 
-  const chartData = useMemo(
-    () => getChartData(monthExpenses, categories),
-    [monthExpenses, categories]
+  // Chart data
+  const chartData = useMemo(() => {
+    if (viewMode === 'monthly') {
+      return getChartData(periodExpenses, categories);
+    } else {
+      // Aggregate by month for yearly view
+      return eachMonthOfInterval({
+        start: startOfYear(currentMonth),
+        end: endOfYear(currentMonth),
+      }).map(month => {
+        const monthKey = getMonthKey(month);
+        const monthExpenses = periodExpenses.filter(e => getMonthKey(parseISO(e.date)) === monthKey);
+        return {
+          date: format(month, 'MMM'),
+          amount: calculateTotalSpent(monthExpenses),
+        };
+      });
+    }
+  }, [viewMode, periodExpenses, categories, currentMonth]);
+
+  // Toggle UI
+  const renderToggle = () => (
+    <div className="flex gap-2 mt-4">
+      <Button
+        size="sm"
+        variant={viewMode === 'monthly' ? 'default' : 'outline'}
+        onClick={() => setViewMode('monthly')}
+      >
+        Monthly
+      </Button>
+      <Button
+        size="sm"
+        variant={viewMode === 'yearly' ? 'default' : 'outline'}
+        onClick={() => setViewMode('yearly')}
+      >
+        Yearly
+      </Button>
+    </div>
   );
 
-  // Daily spending data
+  // Monthly view daily data
   const dailyData = useMemo(() => {
+    if (viewMode !== 'monthly') return [];
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const days = eachDayOfInterval({ start, end });
 
     return days.map(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
-      const dayExpenses = monthExpenses.filter(e => e.date === dateStr);
+      const dayExpenses = periodExpenses.filter(e => e.date === dateStr);
       return {
         date: format(day, 'd'),
         amount: calculateTotalSpent(dayExpenses),
       };
     });
-  }, [currentMonth, monthExpenses]);
-
-  // Category breakdown with budgets
-  const categoryBreakdown = useMemo(() => {
-    return categories
-      .map(category => {
-        const spent = calculateSpentByCategory(monthExpenses, category.id);
-        const budget = getCategoryBudget(budgets, category.id, monthKey);
-        return {
-          ...category,
-          spent,
-          budget,
-          percentUsed: budget > 0 ? (spent / budget) * 100 : 0,
-        };
-      })
-      .filter(c => c.spent > 0 || c.budget > 0)
-      .sort((a, b) => b.spent - a.spent);
-  }, [categories, monthExpenses, budgets, monthKey]);
-
-  // Month comparison
-  const monthChange = prevTotalSpent > 0
-    ? ((totalSpent - prevTotalSpent) / prevTotalSpent) * 100
-    : 0;
-  const isSpendingUp = monthChange > 0;
+  }, [viewMode, currentMonth, periodExpenses]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -113,13 +153,17 @@ const Analytics = () => {
           subtitle="Understand your spending patterns"
         />
 
-        {/* Month Selector */}
-        <MonthSelector
-          currentMonth={currentMonth}
-          onMonthChange={setCurrentMonth}
-        />
+        {/* View Toggle */}
+        {renderToggle()}
 
-        {/* Month Comparison */}
+        {viewMode === 'monthly' && (
+          <MonthSelector
+            currentMonth={currentMonth}
+            onMonthChange={setCurrentMonth}
+          />
+        )}
+
+        {/* Spending Summary */}
         <Card className="mt-6">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
@@ -133,49 +177,48 @@ const Analytics = () => {
                 <div
                   className={cn(
                     'flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium',
-                    isSpendingUp
+                    totalSpent - prevTotalSpent > 0
                       ? 'bg-destructive/10 text-destructive'
                       : 'bg-success/10 text-success'
                   )}
                 >
-                  {isSpendingUp ? (
+                  {totalSpent - prevTotalSpent > 0 ? (
                     <TrendingUp className="w-4 h-4" />
                   ) : (
                     <TrendingDown className="w-4 h-4" />
                   )}
-                  {Math.abs(monthChange).toFixed(0)}%
+                  {Math.abs(((totalSpent - prevTotalSpent) / prevTotalSpent) * 100).toFixed(0)}%
                 </div>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              vs {formatCurrency(prevTotalSpent)} last month
+              vs {formatCurrency(prevTotalSpent)} {viewMode === 'monthly' ? 'last month' : 'last year'}
             </p>
           </CardContent>
         </Card>
 
-        {/* Daily Spending Chart */}
+        {/* Chart */}
         <Card className="mt-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
-              Daily Spending
+              {viewMode === 'monthly' ? 'Daily Spending' : 'Monthly Spending'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyData}>
+                <BarChart data={viewMode === 'monthly' ? dailyData : chartData}>
                   <XAxis
                     dataKey="date"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    interval="preserveStartEnd"
                   />
                   <YAxis hide />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted) / 0.5)' }} />
                   <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                    {dailyData.map((entry, index) => (
+                    {(viewMode === 'monthly' ? dailyData : chartData).map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={entry.amount > 0 ? 'hsl(var(--accent))' : 'hsl(var(--muted))'}
@@ -184,65 +227,6 @@ const Analytics = () => {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Category Breakdown */}
-        <Card className="mt-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">
-              Spending by Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SpendingChart data={chartData} totalSpent={totalSpent} />
-            
-            {/* Category List with Progress */}
-            <div className="mt-6 space-y-4">
-              {categoryBreakdown.map(category => (
-                <div key={category.id} className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <CategoryIcon
-                      icon={category.icon}
-                      color={category.color}
-                      size="sm"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-foreground truncate">
-                          {category.name}
-                        </span>
-                        <span className="text-sm font-semibold text-foreground tabular-nums">
-                          {formatCurrency(category.spent)}
-                        </span>
-                      </div>
-                      {category.budget > 0 && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <Progress
-                            value={Math.min(category.percentUsed, 100)}
-                            className={cn(
-                              'h-1.5 flex-1',
-                              category.percentUsed > 100 && '[&>div]:bg-destructive',
-                              category.percentUsed >= 80 &&
-                                category.percentUsed <= 100 &&
-                                '[&>div]:bg-warning'
-                            )}
-                            style={
-                              category.percentUsed <= 80
-                                ? { ['--progress-color' as any]: category.color }
-                                : undefined
-                            }
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            {formatCurrency(category.budget)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
