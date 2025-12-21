@@ -5,55 +5,63 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 export class BankService {
   private static async fetchAPI(endpoint: string, options: RequestInit = {}) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+  const token = options.headers?.['Authorization'] || ''; // optional
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>), // <- cast here
+  };
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
-    }
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
 
-    return response.json();
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.statusText}`);
   }
+
+  return response.json();
+}
 
   // Initialize Plaid Link Token
-  static async createLinkToken(userId: string): Promise<{ link_token: string }> {
-    return this.fetchAPI('/plaid/create-link-token', {
-      method: 'POST',
-      body: JSON.stringify({ userId }),
-    });
-  }
+static async createLinkToken(token: string): Promise<{ link_token: string }> {
+  return this.fetchAPI('/plaid/create-link-token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+}
 
   // Exchange public token for access token
-  static async exchangePublicToken(
-    publicToken: string,
-    userId: string
-  ): Promise<BankConnection> {
-    return this.fetchAPI('/plaid/exchange-token', {
-      method: 'POST',
-      body: JSON.stringify({ publicToken, userId }),
-    });
+  static async exchangePublicToken(token: string, publicToken: string): Promise<BankConnection> {
+    return this.fetchAPI(
+      '/plaid/exchange-token',
+      {
+        method: 'POST',
+        body: JSON.stringify({ public_token: publicToken }),
+      }
+    );
   }
 
   // Get all bank connections for user
-  static async getBankConnections(userId: string): Promise<BankConnection[]> {
-    return this.fetchAPI(`/bank/connections/${userId}`);
-  }
+static async getBankConnections(token: string): Promise<BankConnection[]> {
+  return this.fetchAPI('/plaid/connections', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+}
 
   // Sync transactions from all connected accounts
-  static async syncTransactions(
-    userId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<BankTransaction[]> {
-    return this.fetchAPI('/bank/sync-transactions', {
-      method: 'POST',
-      body: JSON.stringify({ userId, startDate, endDate }),
-    });
+  static async syncTransactions(token: string, startDate?: string, endDate?: string): Promise<BankTransaction[]> {
+    return this.fetchAPI(
+      '/plaid/sync-transactions',
+      {
+        method: 'POST',
+        body: JSON.stringify({ startDate, endDate }),
+      }
+    );
   }
 
   // Get account balances
@@ -62,14 +70,14 @@ export class BankService {
   }
 
   // Remove bank connection
-  static async removeBankConnection(
-    userId: string,
-    connectionId: string
-  ): Promise<void> {
-    return this.fetchAPI(`/bank/connections/${userId}/${connectionId}`, {
-      method: 'DELETE',
-    });
-  }
+static async removeBankConnection(token: string, connectionId: string): Promise<void> {
+  return this.fetchAPI(`/plaid/connections/${connectionId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+}
 
   // Categorize transaction using AI/rules
   static async categorizeTransaction(

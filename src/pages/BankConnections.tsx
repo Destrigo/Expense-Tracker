@@ -11,19 +11,21 @@ import { toast } from 'sonner';
 const BankConnections = () => {
   const [connections, setConnections] = useState<BankConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const userId = 'demo-user'; // TODO: Get from auth context
+  const token = localStorage.getItem('jwt');
 
   useEffect(() => {
     loadConnections();
   }, []);
 
+
   const loadConnections = async () => {
+    if (!token) return toast.error('No auth token');
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const data = await BankService.getBankConnections(userId);
+      const data = await BankService.getBankConnections(token);
       setConnections(data);
     } catch (error) {
-      console.error('Failed to load bank connections:', error);
+      console.error(error);
       toast.error('Failed to load bank connections');
     } finally {
       setIsLoading(false);
@@ -31,12 +33,10 @@ const BankConnections = () => {
   };
 
   const handleConnectBank = async () => {
+    if (!token) return toast.error('No auth token');
     try {
-      // This will open Plaid Link
-      const { link_token } = await BankService.createLinkToken(userId);
-      
+      const { link_token } = await BankService.createLinkToken(token);
       // TODO: Initialize Plaid Link with link_token
-      // This requires Plaid Link SDK integration
       toast.info('Bank connection feature requires backend setup');
     } catch (error) {
       console.error('Failed to create link token:', error);
@@ -44,92 +44,107 @@ const BankConnections = () => {
     }
   };
 
-  const handleSync = async (connectionId: string) => {
+  const handleSync = async (connectionId: string): Promise<void> => {
+    if (!token) {
+      toast.error('No auth token');
+      return;
+    }
+
     try {
-      await BankService.syncTransactions(userId);
+      await BankService.syncTransactions(token);
       toast.success('Transactions synced successfully');
       await loadConnections();
+      // Make sure nothing is returned
     } catch (error) {
       console.error('Failed to sync:', error);
       toast.error('Failed to sync transactions');
     }
   };
 
-  const handleRemove = async (connectionId: string) => {
+  const handleRemove = async (connectionId: string): Promise<void> => {
+    if (!token) {
+      toast.error('No auth token');
+      return;
+    }
+
     try {
-      await BankService.removeBankConnection(userId, connectionId);
-toast.success('Bank connection removed');
-await loadConnections();
-} catch (error) {
-console.error('Failed to remove connection:', error);
-toast.error('Failed to remove connection');
-}
-};
+      await BankService.removeBankConnection(token, connectionId);
+      toast.success('Bank connection removed');
+      await loadConnections();
+      // Make sure nothing is returned
+    } catch (error) {
+      console.error('Failed to remove connection:', error);
+      toast.error('Failed to remove connection');
+    }
+  };
+
 return (
-<div className="min-h-screen pb-24 px-4 pt-safe">
-<div className="max-w-lg mx-auto">
-<PageHeader
-       title="Bank Connections"
-       subtitle="Connect your bank accounts for automatic tracking"
-     />
-    {/* Backend Status Warning */}
-    <Card className="mt-4 border-warning/50 bg-warning/5">
-      <CardContent className="p-4">
-        <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-warning mb-1">
-              Backend Required
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Bank integration requires a backend server to securely connect to financial
-              institutions. The UI is ready - backend setup is needed to enable this feature.
-            </p>
+    <div className="min-h-screen pb-24 px-4 pt-safe">
+      <div className="max-w-lg mx-auto">
+        <PageHeader
+          title="Bank Connections"
+          subtitle="Connect your bank accounts for automatic tracking"
+        />
+
+        {/* Backend Status Warning */}
+        <Card className="mt-4 border-warning/50 bg-warning/5">
+          <CardContent className="p-4">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-warning mb-1">
+                  Backend Required
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Bank integration requires a backend server to securely connect to financial
+                  institutions. The UI is ready - backend setup is needed to enable this feature.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button
+          size="lg"
+          variant="accent"
+          className="w-full mt-6"
+          onClick={handleConnectBank}
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Connect Bank Account
+        </Button>
+
+        {isLoading ? (
+          <div className="mt-6 text-center text-muted-foreground">
+            Loading connections...
           </div>
-        </div>
-      </CardContent>
-    </Card>
-
-    <Button
-      size="lg"
-      variant="accent"
-      className="w-full mt-6"
-      onClick={handleConnectBank}
-    >
-      <Plus className="w-5 h-5 mr-2" />
-      Connect Bank Account
-    </Button>
-
-    {isLoading ? (
-      <div className="mt-6 text-center text-muted-foreground">
-        Loading connections...
+        ) : connections.length === 0 ? (
+          <Card className="mt-6">
+            <CardContent className="p-8 text-center">
+              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-semibold text-foreground mb-1">
+                No Banks Connected
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Connect your bank account to automatically import and categorize transactions
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="mt-6 space-y-4">
+            {connections.map(connection => (
+              <BankConnectionCard
+                key={connection.id}
+                connection={connection}
+                onSync={handleSync}
+                onRemove={handleRemove}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    ) : connections.length === 0 ? (
-      <Card className="mt-6">
-        <CardContent className="p-8 text-center">
-          <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-1">
-            No Banks Connected
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Connect your bank account to automatically import and categorize transactions
-          </p>
-        </CardContent>
-      </Card>
-    ) : (
-      <div className="mt-6 space-y-4">
-        {connections.map(connection => (
-          <BankConnectionCard
-            key={connection.id}
-            connection={connection}
-            onSync={handleSync}
-            onRemove={handleRemove}
-          />
-        ))}
-      </div>
-    )}
-  </div>
-</div>
-);
+    </div>
+  );
 };
+
 export default BankConnections;

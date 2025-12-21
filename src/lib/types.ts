@@ -57,6 +57,7 @@ export interface MonthSummary {
 
 export interface BankTransaction {
   id: string;
+  bankConnectionId: string; // <-- add this
   date: string;
   description: string;
   amount: number;

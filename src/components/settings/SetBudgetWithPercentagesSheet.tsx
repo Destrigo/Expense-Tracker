@@ -110,6 +110,23 @@ export const SetBudgetWithPercentagesSheet = ({
           </p>
         </SheetHeader>
 
+        <div className="space-y-2">
+            <Label className="text-muted-foreground">Quick amounts</Label>
+            <div className="flex flex-wrap gap-2">
+              {presetAmounts.map(preset => (
+                <Button
+                  key={preset}
+                  type="button"
+                  variant={amount === preset.toString() ? 'accent' : 'secondary'}
+                  size="sm"
+                  onClick={() => setAmount(preset.toString())}
+                >
+                  ${preset.toLocaleString()}
+                </Button>
+              ))}
+            </div>
+          </div>
+        
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="budget" className="text-muted-foreground">
@@ -131,23 +148,6 @@ export const SetBudgetWithPercentagesSheet = ({
                 className="pl-10 h-14 text-2xl font-semibold"
                 autoFocus
               />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">Quick amounts</Label>
-            <div className="flex flex-wrap gap-2">
-              {presetAmounts.map(preset => (
-                <Button
-                  key={preset}
-                  type="button"
-                  variant={amount === preset.toString() ? 'accent' : 'secondary'}
-                  size="sm"
-                  onClick={() => setAmount(preset.toString())}
-                >
-                  ${preset.toLocaleString()}
-                </Button>
-              ))}
             </div>
           </div>
 
