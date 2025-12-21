@@ -11,12 +11,15 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import BankConnections from "./pages/BankConnections";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+     <CurrencyProvider>
       <ExpenseProvider>
         <Toaster />
         <Sonner position="top-center" />
@@ -27,11 +30,13 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/bank-connections" element={<BankConnections />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <BottomNav />
         </BrowserRouter>
       </ExpenseProvider>
+     </CurrencyProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

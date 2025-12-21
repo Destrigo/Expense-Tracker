@@ -9,7 +9,7 @@ import { BudgetProgressCard } from '@/components/expense/BudgetProgressCard';
 import { SpendingChart, ChartLegend } from '@/components/expense/SpendingChart';
 import { ExpenseCard } from '@/components/expense/ExpenseCard';
 import { AddExpenseSheet } from '@/components/expense/AddExpenseSheet';
-import { SetBudgetSheet } from '@/components/settings/SetBudgetSheet';
+import { SetBudgetWithPercentagesSheet } from '@/components/settings/SetBudgetWithPercentagesSheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Expense } from '@/lib/types';
@@ -64,6 +64,16 @@ const Index = () => {
     () => getRecentExpenses(monthExpenses, 5),
     [monthExpenses]
   );
+
+  const currentMonthBudget = useMemo(
+  () => monthlyBudgets.find(b => b.month === monthKey) || { 
+    month: monthKey, 
+    totalBudget: 0, 
+    useCategoryPercentages: false, 
+    categoryPercentages: {} 
+  },
+  [monthlyBudgets, monthKey]
+);
 
   const handleSaveExpense = (
     expenseData: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>
@@ -207,12 +217,17 @@ const Index = () => {
           onSave={handleSaveExpense}
         />
 
-        <SetBudgetSheet
+        <SetBudgetWithPercentagesSheet
           open={isBudgetOpen}
           onOpenChange={setIsBudgetOpen}
-          currentBudget={budget}
+          currentBudget={currentMonthBudget.totalBudget} // number for display
           monthKey={monthKey}
-          onSave={amount => setMonthlyBudget(monthKey, amount)}
+          categories={categories}
+          useCategoryPercentages={currentMonthBudget.useCategoryPercentages}
+          categoryPercentages={currentMonthBudget.categoryPercentages}
+          onSave={(amount, usePercentages, percentages) => {
+            setMonthlyBudget(monthKey, amount, usePercentages, percentages);
+          }}
         />
       </div>
     </div>

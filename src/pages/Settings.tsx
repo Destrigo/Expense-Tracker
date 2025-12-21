@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Shield,
   Database,
+  Building2,
 } from 'lucide-react';
 import { useExpenses } from '@/contexts/ExpenseContext';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -163,6 +164,17 @@ const Settings = () => {
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </Button>
+            <Button
+                variant="outline"
+                className="w-full justify-between"
+                onClick={() => window.location.href = '/bank-connections'}
+              >
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Bank Connections
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </Button>
 
             <Button
               variant="outline"

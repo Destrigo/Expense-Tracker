@@ -103,7 +103,12 @@ export const useExpenseStore = () => {
     });
   }, []);
 
-  const setMonthlyBudget = useCallback((month: string, totalBudget: number) => {
+  const setMonthlyBudget = useCallback((
+    month: string, 
+    totalBudget: number,
+    useCategoryPercentages?: boolean,
+    categoryPercentages?: Record<string, number>
+  ) => {
     setStore(prev => {
       const existingIndex = prev.monthlyBudgets.findIndex(b => b.month === month);
       
@@ -112,7 +117,12 @@ export const useExpenseStore = () => {
         if (totalBudget <= 0) {
           newBudgets.splice(existingIndex, 1);
         } else {
-          newBudgets[existingIndex] = { ...newBudgets[existingIndex], totalBudget };
+          newBudgets[existingIndex] = { 
+            ...newBudgets[existingIndex], 
+            totalBudget,
+            useCategoryPercentages,
+            categoryPercentages
+          };
         }
         return { ...prev, monthlyBudgets: newBudgets };
       }
@@ -120,7 +130,12 @@ export const useExpenseStore = () => {
       if (totalBudget > 0) {
         return {
           ...prev,
-          monthlyBudgets: [...prev.monthlyBudgets, { month, totalBudget }],
+          monthlyBudgets: [...prev.monthlyBudgets, { 
+            month, 
+            totalBudget,
+            useCategoryPercentages,
+            categoryPercentages
+          }],
         };
       }
       

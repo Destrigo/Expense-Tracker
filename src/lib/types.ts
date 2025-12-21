@@ -28,6 +28,8 @@ export interface Budget {
 export interface MonthlyBudget {
   month: string; // YYYY-MM format
   totalBudget: number;
+  useCategoryPercentages?: boolean; // New field
+  categoryPercentages?: Record<string, number>; // categoryId -> percentage
 }
 
 export interface ExpenseStore {
@@ -51,6 +53,39 @@ export interface MonthSummary {
     budget: number;
     percentUsed: number;
   }[];
+}
+
+export interface BankTransaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  merchantName?: string;
+  category?: string;
+  pending: boolean;
+  accountId: string;
+}
+
+export interface BankAccount {
+  id: string;
+  institutionId: string;
+  institutionName: string;
+  accountName: string;
+  accountType: 'checking' | 'savings' | 'credit';
+  balance: number;
+  currency: string;
+  lastSync: string;
+  isActive: boolean;
+}
+
+export interface BankConnection {
+  id: string;
+  accessToken: string; // Will be stored securely via backend
+  institutionId: string;
+  institutionName: string;
+  accounts: BankAccount[];
+  createdAt: string;
+  lastSync: string;
 }
 
 export type ViewMode = 'month' | 'year';

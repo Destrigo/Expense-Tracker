@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useExpenses } from '@/contexts/ExpenseContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type ProfileData = {
   name: string;
@@ -20,19 +21,24 @@ const defaultProfile: ProfileData = {
   name: '',
   email: '',
   monthlyIncome: 0,
-  currency: '€',
+  currency: 'USD', // Changed from '€' to 'USD',
 };
 
 const Profile = () => {
   const { expenses } = useExpenses();
   const [profile, setProfile] = useState<ProfileData>(defaultProfile);
   const [saved, setSaved] = useState(false);
+  const { currency: globalCurrency, setCurrency: setGlobalCurrency } = useCurrency();
 
-  /* Load profile from localStorage */
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      setProfile(JSON.parse(stored));
+      const loadedProfile = JSON.parse(stored);
+      setProfile(loadedProfile);
+      // Sync currency with global context
+      if (loadedProfile.currency) {
+        setGlobalCurrency(loadedProfile.currency);
+      }
     }
   }, []);
 
@@ -50,6 +56,11 @@ const Profile = () => {
   ) => {
     setProfile(prev => ({ ...prev, [key]: value }));
     setSaved(false);
+    
+    // If currency changed, update global currency
+    if (key === 'currency') {
+      setGlobalCurrency(value as string);
+    }
   };
 
   const handleSave = () => {
@@ -106,11 +117,24 @@ const Profile = () => {
 
             <div className="space-y-1">
               <Label>Currency</Label>
-              <Input
+              <select
                 value={profile.currency}
-                onChange={e => handleChange('currency', e.target.value)}
-                placeholder="€"
-              />
+                onChange={e => {
+                  const newCurrency = e.target.value;
+                  setProfile(prev => ({ ...prev, currency: newCurrency }));
+                  setGlobalCurrency(newCurrency);
+                  setSaved(false);
+                }}
+                className="w-full px-3 py-2 border rounded-md text-sm bg-background border-input focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+              >
+                {[
+                  'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL',
+                ].map(curr => (
+                  <option key={curr} value={curr}>
+                    {curr}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <Button className="w-full mt-2" onClick={handleSave}>
