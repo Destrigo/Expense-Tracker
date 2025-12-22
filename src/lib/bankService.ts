@@ -35,13 +35,13 @@ static async createLinkToken(token: string): Promise<{ link_token: string }> {
 
   // Exchange public token for access token
   static async exchangePublicToken(token: string, publicToken: string): Promise<BankConnection> {
-    return this.fetchAPI(
-      '/plaid/exchange-token',
-      {
-        method: 'POST',
-        body: JSON.stringify({ public_token: publicToken }),
-      }
-    );
+    return this.fetchAPI('/plaid/exchange-token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ public_token: publicToken }),
+    });
   }
 
   // Get all bank connections for user

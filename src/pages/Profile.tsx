@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { User, Save } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useExpenses } from '@/contexts/ExpenseContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
@@ -15,34 +13,43 @@ type ProfileData = {
   currency: string;
 };
 
-const STORAGE_KEY = 'expense-tracker-profile';
-
-const defaultProfile: ProfileData = {
-  name: '',
-  email: '',
-  monthlyIncome: 0,
-  currency: 'USD', // Changed from '€' to 'USD',
-};
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { expenses } = useExpenses();
-  const [profile, setProfile] = useState<ProfileData>(defaultProfile);
-  const [saved, setSaved] = useState(false);
   const { currency: globalCurrency, setCurrency: setGlobalCurrency } = useCurrency();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const loadedProfile = JSON.parse(stored);
-      setProfile(loadedProfile);
-      // Sync currency with global context
-      if (loadedProfile.currency) {
-        setGlobalCurrency(loadedProfile.currency);
+    const fetchProfile = async () => {
+      const token = localStorage.getItem('jwt');
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch user');
+
+        const data: ProfileData = await res.json();
+        setProfile(data);
+        setGlobalCurrency(data.currency);
+      } catch (err) {
+        console.error(err);
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
 
-  /* Derived stats */
   const totalExpenses = useMemo(
     () => expenses.reduce((sum, e) => sum + e.amount, 0),
     [expenses]
@@ -50,23 +57,17 @@ const Profile = () => {
 
   const expenseCount = expenses.length;
 
-  const handleChange = <K extends keyof ProfileData>(
-    key: K,
-    value: ProfileData[K]
-  ) => {
-    setProfile(prev => ({ ...prev, [key]: value }));
-    setSaved(false);
-    
-    // If currency changed, update global currency
-    if (key === 'currency') {
-      setGlobalCurrency(value as string);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        Loading...
+      </div>
+    );
+  }
 
-  const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    setSaved(true);
-  };
+  if (!profile) {
+    return null; // fallback if user not found
+  }
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-safe">
@@ -77,7 +78,7 @@ const Profile = () => {
           icon={<User className="w-5 h-5" />}
         />
 
-        {/* Profile Info */}
+        {/* Profile Info (read-only) */}
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
@@ -85,62 +86,24 @@ const Profile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label>Name</Label>
-              <Input
-                value={profile.name}
-                onChange={e => handleChange('name', e.target.value)}
-                placeholder="John Doe"
-              />
+            <div>
+              <p className="text-muted-foreground">Name</p>
+              <p className="font-semibold">{profile.name}</p>
             </div>
-
-            <div className="space-y-1">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={profile.email}
-                onChange={e => handleChange('email', e.target.value)}
-                placeholder="john@email.com"
-              />
+            <div>
+              <p className="text-muted-foreground">Email</p>
+              <p className="font-semibold">{profile.email}</p>
             </div>
-
-            <div className="space-y-1">
-              <Label>Monthly Income</Label>
-              <Input
-                type="number"
-                value={profile.monthlyIncome}
-                onChange={e =>
-                  handleChange('monthlyIncome', Number(e.target.value))
-                }
-              />
+            <div>
+              <p className="text-muted-foreground">Monthly Income</p>
+              <p className="font-semibold">
+                {profile.currency} {profile.monthlyIncome.toFixed(2)}
+              </p>
             </div>
-
-            <div className="space-y-1">
-              <Label>Currency</Label>
-              <select
-                value={profile.currency}
-                onChange={e => {
-                  const newCurrency = e.target.value;
-                  setProfile(prev => ({ ...prev, currency: newCurrency }));
-                  setGlobalCurrency(newCurrency);
-                  setSaved(false);
-                }}
-                className="w-full px-3 py-2 border rounded-md text-sm bg-background border-input focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-              >
-                {[
-                  'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'BRL',
-                ].map(curr => (
-                  <option key={curr} value={curr}>
-                    {curr}
-                  </option>
-                ))}
-              </select>
+            <div>
+              <p className="text-muted-foreground">Currency</p>
+              <p className="font-semibold">{profile.currency}</p>
             </div>
-
-            <Button className="w-full mt-2" onClick={handleSave}>
-              <Save className="w-4 h-4 mr-2" />
-              {saved ? 'Saved' : 'Save Profile'}
-            </Button>
           </CardContent>
         </Card>
 

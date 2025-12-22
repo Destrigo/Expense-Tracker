@@ -1,27 +1,33 @@
 // lib/bankServiceOffline.ts
 import { BankConnection, BankTransaction, BankAccount } from './types';
-
-const CONNECTIONS_KEY = 'offline_bank_connections';
-const TRANSACTIONS_KEY = 'offline_bank_transactions';
+import { AuthServiceOffline } from './authServiceOffline';
 
 export class BankServiceOffline {
   // --- Local storage helpers ---
   private static getConnectionsFromStorage(): BankConnection[] {
-    const data = localStorage.getItem(CONNECTIONS_KEY);
+    const token = AuthServiceOffline.getCurrentUserToken();
+    if (!token) return [];
+    const data = localStorage.getItem(`bank-connections_${token}`);
     return data ? JSON.parse(data) : [];
   }
 
   private static saveConnectionsToStorage(connections: BankConnection[]) {
-    localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(connections));
+    const token = AuthServiceOffline.getCurrentUserToken();
+    if (!token) return;
+    localStorage.setItem(`bank-connections_${token}`, JSON.stringify(connections));
   }
 
   private static getTransactionsFromStorage(): BankTransaction[] {
-    const data = localStorage.getItem(TRANSACTIONS_KEY);
+    const token = AuthServiceOffline.getCurrentUserToken();
+    if (!token) return [];
+    const data = localStorage.getItem(`bank-transactions_${token}`);
     return data ? JSON.parse(data) : [];
   }
 
   private static saveTransactionsToStorage(transactions: BankTransaction[]) {
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+    const token = AuthServiceOffline.getCurrentUserToken();
+    if (!token) return;
+    localStorage.setItem(`bank-transactions_${token}`, JSON.stringify(transactions));
   }
 
   // --- Bank connections ---
@@ -35,37 +41,37 @@ export class BankServiceOffline {
   }
 
   static async exchangePublicToken(publicToken: string): Promise<BankConnection> {
-  // Offline mode: simulate a new bank connection
+    // Offline mode: simulate a new bank connection
     const connections = this.getConnectionsFromStorage();
 
     const newConnection: BankConnection = {
-        id: `${Date.now()}`, // unique ID
-        institutionId: 'offline-bank',
-        institutionName: 'Offline Bank',
-        accessToken: 'offline-access-token',
-        accounts: [
+      id: `${Date.now()}`,
+      institutionId: 'offline-bank',
+      institutionName: 'Offline Bank',
+      accessToken: 'offline-access-token',
+      accounts: [
         {
-            id: 'acc-1',
-            institutionId: 'offline-bank',
-            institutionName: 'Offline Bank',
-            accountName: 'Checking',
-            accountType: 'checking',
-            balance: 1000,
-            currency: 'USD',
-            lastSync: new Date().toISOString(),
-            isActive: true,
+          id: 'acc-1',
+          institutionId: 'offline-bank',
+          institutionName: 'Offline Bank',
+          accountName: 'Checking',
+          accountType: 'checking',
+          balance: 1000,
+          currency: 'USD',
+          lastSync: new Date().toISOString(),
+          isActive: true,
         },
-        ],
-        lastSync: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
+      ],
+      lastSync: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
 
-  // Save to local storage
-  connections.push(newConnection);
-  localStorage.setItem('bank-connections', JSON.stringify(connections));
+    // Save to local storage
+    connections.push(newConnection);
+    this.saveConnectionsToStorage(connections);
 
-  return newConnection;
-}
+    return newConnection;
+  }
 
   static async removeBankConnection(connectionId: string): Promise<void> {
     const connections = this.getConnectionsFromStorage();
@@ -90,8 +96,6 @@ export class BankServiceOffline {
   // --- Accounts ---
   static async getAccountBalances(): Promise<BankAccount[]> {
     const connections = this.getConnectionsFromStorage();
-    const accounts: BankAccount[] = [];
-    connections.forEach(c => accounts.push(...c.accounts));
-    return accounts;
+    return connections.flatMap(c => c.accounts);
   }
 }

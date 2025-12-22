@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
 export class AuthController {
   static async register(req: Request, res: Response): Promise<void> {
@@ -20,9 +21,9 @@ export class AuthController {
 
       // Create user
       const user = new User({
+        name,
         email,
         password: hashedPassword,
-        name,
         currency: currency || 'USD',
       });
 
@@ -45,6 +46,23 @@ export class AuthController {
     } catch (error) {
       console.error('Register error:', error);
       res.status(500).json({ error: 'Registration failed' });
+    }
+  }
+
+  static async getMe(req: AuthRequest, res: any) {
+    try {
+      if (!req.userId) return res.status(401).json({ error: 'Unauthorized' });
+        const user = await User.findById(req.userId).select('-password'); // exclude password
+      if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        currency: user.currency,
+      });
+      } catch (err) {
+      console.error('getMe error:', err);
+      res.status(500).json({ error: 'Failed to fetch user' });
     }
   }
 

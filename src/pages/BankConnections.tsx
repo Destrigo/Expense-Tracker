@@ -1,118 +1,118 @@
 import { useState, useEffect } from 'react';
-import { Plus, Building2, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Building2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { BankConnectionCard } from '@/components/bank/BankConnectionCard';
-import { BankService } from '@/lib/bankService';
 import { BankConnection } from '@/lib/types';
 import { toast } from 'sonner';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const BankConnections = () => {
   const [connections, setConnections] = useState<BankConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [username, setUsername] = useState<string>('');
+  const navigate = useNavigate();
+
+  // Read JWT from localStorage
   const token = localStorage.getItem('jwt');
 
   useEffect(() => {
-    loadConnections();
-  }, []);
+    if (!token) {
+      navigate('/login');
+      return;
+    }
 
+    // Load user info and bank connections
+    loadUser(token);
+    loadConnections(token);
+  }, [token, navigate]);
 
-  const loadConnections = async () => {
-    if (!token) return toast.error('No auth token');
+  const loadUser = async (token: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch user');
+      const data = await res.json();
+      setUsername(data.name);
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not load user info');
+    }
+  };
+
+  const loadConnections = async (token: string) => {
     setIsLoading(true);
     try {
-      const data = await BankService.getBankConnections(token);
+      const res = await fetch(`${API_BASE_URL}/plaid/connections`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          toast.error('Session expired. Please log in again.');
+          navigate('/login');
+          return;
+        }
+        const text = await res.text();
+        throw new Error(`Failed to fetch connections: ${res.status} ${text}`);
+      }
+
+      const data: BankConnection[] = await res.json();
       setConnections(data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load bank connections');
+    } catch (error: any) {
+      console.error('loadConnections error:', error);
+      toast.error(error.message || 'Failed to load connections');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleConnectBank = async () => {
-    if (!token) return toast.error('No auth token');
+  const handleSync = async (connectionId: string) => {
+    if (!token) return navigate('/login');
     try {
-      const { link_token } = await BankService.createLinkToken(token);
-      // TODO: Initialize Plaid Link with link_token
-      toast.info('Bank connection feature requires backend setup');
-    } catch (error) {
-      console.error('Failed to create link token:', error);
-      toast.error('Failed to connect bank');
-    }
-  };
-
-  const handleSync = async (connectionId: string): Promise<void> => {
-    if (!token) {
-      toast.error('No auth token');
-      return;
-    }
-
-    try {
-      await BankService.syncTransactions(token);
+      const res = await fetch(`${API_BASE_URL}/plaid/connections/${connectionId}/sync`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Sync failed');
       toast.success('Transactions synced successfully');
-      await loadConnections();
-      // Make sure nothing is returned
-    } catch (error) {
-      console.error('Failed to sync:', error);
+      await loadConnections(token);
+    } catch (err) {
+      console.error(err);
       toast.error('Failed to sync transactions');
     }
   };
 
-  const handleRemove = async (connectionId: string): Promise<void> => {
-    if (!token) {
-      toast.error('No auth token');
-      return;
-    }
-
+  const handleRemove = async (connectionId: string) => {
+    if (!token) return navigate('/login');
     try {
-      await BankService.removeBankConnection(token, connectionId);
+      const res = await fetch(`${API_BASE_URL}/plaid/connections/${connectionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Remove failed');
       toast.success('Bank connection removed');
-      await loadConnections();
-      // Make sure nothing is returned
-    } catch (error) {
-      console.error('Failed to remove connection:', error);
+      await loadConnections(token);
+    } catch (err) {
+      console.error(err);
       toast.error('Failed to remove connection');
     }
   };
 
-return (
+  return (
     <div className="min-h-screen pb-24 px-4 pt-safe">
       <div className="max-w-lg mx-auto">
         <PageHeader
           title="Bank Connections"
-          subtitle="Connect your bank accounts for automatic tracking"
+          subtitle={`Hello ${username}, connected accounts`}
         />
-
-        {/* Backend Status Warning */}
-        <Card className="mt-4 border-warning/50 bg-warning/5">
-          <CardContent className="p-4">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-warning mb-1">
-                  Backend Required
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Bank integration requires a backend server to securely connect to financial
-                  institutions. The UI is ready - backend setup is needed to enable this feature.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Button
-          size="lg"
-          variant="accent"
-          className="w-full mt-6"
-          onClick={handleConnectBank}
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Connect Bank Account
-        </Button>
 
         {isLoading ? (
           <div className="mt-6 text-center text-muted-foreground">
@@ -122,9 +122,7 @@ return (
           <Card className="mt-6">
             <CardContent className="p-8 text-center">
               <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <h3 className="font-semibold text-foreground mb-1">
-                No Banks Connected
-              </h3>
+              <h3 className="font-semibold text-foreground mb-1">No Banks Connected</h3>
               <p className="text-sm text-muted-foreground">
                 Connect your bank account to automatically import and categorize transactions
               </p>
@@ -136,8 +134,8 @@ return (
               <BankConnectionCard
                 key={connection.id}
                 connection={connection}
-                onSync={handleSync}
-                onRemove={handleRemove}
+                onSync={() => handleSync(connection.id)}
+                onRemove={() => handleRemove(connection.id)}
               />
             ))}
           </div>

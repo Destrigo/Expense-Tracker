@@ -11,6 +11,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Login from "./pages/Login";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import BankConnections from "./pages/BankConnections";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/bank-connections" element={<BankConnections />} />
+            <Route path="/login" element={<Login />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <BottomNav />
