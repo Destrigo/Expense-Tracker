@@ -13,17 +13,37 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
-import BankConnections from "./pages/BankConnections";
+import { InstallPrompt } from "@/components/InstallPrompt";
+// import { useEffect } from 'react';
+// import { useNavigate, useSearchParams } from 'react-router-dom';
+// import BankConnections from "./pages/BankConnections";
 
 const queryClient = new QueryClient();
 
+// export const useAppShortcuts = () => {
+//   const [searchParams] = useSearchParams();
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     const action = searchParams.get('action');
+    
+//     if (action === 'add') {
+//       // Trigger add expense sheet
+//       // You'll need to lift state or use a global state manager
+//       navigate('/', { state: { openAddExpense: true } });
+//     }
+//   }, [searchParams, navigate]);
+// };
+
 const App = () => (
+  
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
      <CurrencyProvider>
       <ExpenseProvider>
         <Toaster />
         <Sonner position="top-center" />
+        <InstallPrompt />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -31,7 +51,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/bank-connections" element={<BankConnections />} />
+            {/* <Route path="/bank-connections" element={<BankConnections />} /> */}
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

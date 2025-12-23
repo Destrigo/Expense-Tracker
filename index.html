@@ -2,32 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    
+    <!-- Basic Meta Tags -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0" />
+    <meta name="description" content="Track your expenses privately and offline" />
+    
+    <!-- Theme Colors -->
     <meta name="theme-color" content="#14b8a6" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#14b8a6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a" />
+    
+    <!-- Android/Chrome -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Expense Tracker" />
+    
+    <!-- iOS/Safari -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Expenses" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     
-    <title>Expense Tracker - Private & Offline</title>
-    <meta name="description" content="Privacy-first, offline-only expense tracker. Track spending, manage budgets, and understand your financial patterns - all data stays on your device." />
-    <meta name="author" content="Lovable" />
-
-    <meta property="og:title" content="Expense Tracker - Private & Offline" />
-    <meta property="og:description" content="Privacy-first, offline-only expense tracker. Track spending, manage budgets, and understand your financial patterns." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-    <link rel="apple-touch-icon" href="/favicon.ico" />
+    <title>Expense Tracker - Track Your Spending</title>
   </head>
   <body>
+    <div id="loading-screen">
+      <div class="logo">$</div>
+      <div class="text">Expense Tracker</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

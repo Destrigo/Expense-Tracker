@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDatabase } from './config/database';
 import authRoutes from './routes/authRoutes';
-import plaidRoutes from './routes/plaidRoutes';
+import nordigenRoutes from './routes/nordigenRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -20,7 +20,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/plaid', plaidRoutes);
+app.use('/api/nordigen', nordigenRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

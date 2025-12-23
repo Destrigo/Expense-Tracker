@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { BankConnectionCard } from '@/components/bank/BankConnectionCard';
+import { PlaidLinkButton } from '@/components/bank/PlaidLinkButton';
 import { BankConnection } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -15,7 +16,6 @@ const BankConnections = () => {
   const [username, setUsername] = useState<string>('');
   const navigate = useNavigate();
 
-  // Read JWT from localStorage
   const token = localStorage.getItem('jwt');
 
   useEffect(() => {
@@ -24,7 +24,6 @@ const BankConnections = () => {
       return;
     }
 
-    // Load user info and bank connections
     loadUser(token);
     loadConnections(token);
   }, [token, navigate]);
@@ -60,8 +59,7 @@ const BankConnections = () => {
           navigate('/login');
           return;
         }
-        const text = await res.text();
-        throw new Error(`Failed to fetch connections: ${res.status} ${text}`);
+        throw new Error(`Failed to fetch connections`);
       }
 
       const data: BankConnection[] = await res.json();
@@ -77,9 +75,12 @@ const BankConnections = () => {
   const handleSync = async (connectionId: string) => {
     if (!token) return navigate('/login');
     try {
-      const res = await fetch(`${API_BASE_URL}/plaid/connections/${connectionId}/sync`, {
+      const res = await fetch(`${API_BASE_URL}/plaid/sync-transactions`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       if (!res.ok) throw new Error('Sync failed');
       toast.success('Transactions synced successfully');
@@ -111,9 +112,15 @@ const BankConnections = () => {
       <div className="max-w-lg mx-auto">
         <PageHeader
           title="Bank Connections"
-          subtitle={`Hello ${username}, connected accounts`}
+          subtitle={`Hello ${username}, manage your accounts`}
         />
 
+        {/* Add Bank Button */}
+        <div className="mt-6">
+          <PlaidLinkButton onSuccess={() => loadConnections(token!)} />
+        </div>
+
+        {/* Loading State */}
         {isLoading ? (
           <div className="mt-6 text-center text-muted-foreground">
             Loading connections...

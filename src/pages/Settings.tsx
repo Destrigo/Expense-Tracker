@@ -164,7 +164,8 @@ const Settings = () => {
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </Button>
-            <Button
+            {/* removed for bank connection */}
+            {/* <Button
                 variant="outline"
                 className="w-full justify-between"
                 onClick={() => window.location.href = '/bank-connections'}
@@ -174,7 +175,31 @@ const Settings = () => {
                   Bank Connections
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </Button>
+              </Button> */}
+            <Card className="mt-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  Coming Soon
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Bank Connections</p>
+                      <p className="text-xs text-muted-foreground">
+                        Auto-import transactions from your bank
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 bg-accent/10 text-accent rounded-full">
+                    Soon
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
 
             <Button
               variant="outline"
