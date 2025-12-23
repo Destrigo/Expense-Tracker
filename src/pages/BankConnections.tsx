@@ -31,7 +31,7 @@ const BankConnections = () => {
 
   const loadUser = async (token: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/users/me`, {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to fetch user');

@@ -59,6 +59,7 @@ export class AuthController {
         name: user.name,
         email: user.email,
         currency: user.currency,
+        monthlyIncome: user.monthlyIncome || 0, // default to 0 if missing
       });
       } catch (err) {
       console.error('getMe error:', err);

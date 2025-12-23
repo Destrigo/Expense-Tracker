@@ -7,6 +7,7 @@ export interface IUser extends Document {
   currency: string;
   createdAt: Date;
   updatedAt: Date;
+  monthlyIncome?: number; // <-- add this
 }
 
 const UserSchema = new Schema<IUser>(
